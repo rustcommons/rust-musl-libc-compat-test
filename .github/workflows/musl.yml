@@ -1,0 +1,65 @@
+name: Static musl probe
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  musl:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CARGO_BUILD_JOBS: 2
+      RUST_TEST_THREADS: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: |
+          df -h .
+          sudo apt-get update
+          sudo apt-get install -y musl-tools binutils file
+          rustup component add rustfmt clippy
+          rustup target add x86_64-unknown-linux-musl
+      - name: Check formatting of maintained modules
+        run: rustfmt --check --edition 2024 --config skip_children=true src/tests/support.rs src/tests/process.rs src/tests/filesystem.rs src/tests/syscalls.rs
+      - name: Unit tests and lint
+        run: |
+          cargo test --locked
+          cargo clippy --locked --all-targets
+      - name: Build and inspect static executable
+        shell: bash
+        run: |
+          cargo build --release --locked
+          binary=target/x86_64-unknown-linux-musl/release/musl-compat-test
+          test "$(uname -m)" = x86_64
+          file "$binary" | tee /tmp/musl-file.txt
+          grep -q 'statically linked' /tmp/musl-file.txt
+          readelf -h "$binary" | grep 'Advanced Micro Devices X86-64'
+          readelf -d "$binary" > /tmp/musl-dynamic.txt
+          cat /tmp/musl-dynamic.txt
+          if grep -q NEEDED /tmp/musl-dynamic.txt; then exit 1; fi
+          ldd "$binary" > /tmp/musl-ldd.txt 2>&1 || true
+          cat /tmp/musl-ldd.txt
+          grep -q 'not a dynamic executable' /tmp/musl-ldd.txt
+          "$binary" --version
+          "$binary" | tee /tmp/musl-run.txt
+          grep -q 'results: 15 passed, 0 skipped, 0 failed' /tmp/musl-run.txt
+      - name: Concurrent runtime isolation
+        shell: python
+        run: |
+          import concurrent.futures, os, pathlib, subprocess, tempfile
+          binary = str(pathlib.Path('target/x86_64-unknown-linux-musl/release/musl-compat-test').resolve())
+          with tempfile.TemporaryDirectory() as root:
+              # A stale path from an older binary must neither collide nor be deleted.
+              stale = pathlib.Path(root) / 'musl_compat_sym'
+              stale.mkdir()
+              (stale / 'link.txt').write_text('preserve me')
+              with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+                  results = list(pool.map(lambda _: subprocess.run([binary], env=dict(os.environ, TMPDIR=root), capture_output=True, text=True, timeout=30), range(12)))
+              for result in results:
+                  assert result.returncode == 0, result.stdout + result.stderr
+                  assert 'results: 15 passed, 0 skipped, 0 failed' in result.stdout, result.stdout
+              assert (stale / 'link.txt').read_text() == 'preserve me'
+              assert list(pathlib.Path(root).iterdir()) == [stale]
+              print('12 concurrent runs passed; private resources cleaned; stale user data preserved')

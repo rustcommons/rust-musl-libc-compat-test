@@ -5,6 +5,7 @@ pub mod filesystem;
 pub mod network;
 pub mod process;
 pub mod syscalls;
+mod support;
 pub mod threading;
 
 use crate::runner::Test;
