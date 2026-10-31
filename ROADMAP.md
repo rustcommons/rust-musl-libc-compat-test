@@ -19,15 +19,15 @@ The documentation checklist records delivered work; unchecked items remain futur
 - [x] Refocus `README.md` on purpose, limited scope, prerequisites, quick start, static checks, no-root runtime requirements and relative documentation links. State that the package `rust-musl-libc-compat-test` builds the executable `musl-compat-test`, a focused runtime probe rather than a library or application-certification suite.
 - [x] Add `USER_GUIDE.md` for detailed source build/static verification, local execution, remote transfer/execution, `--version`/`-V`, output interpretation, kernel/security skips and exit status (normal completion: 0 without failures, 1 with failures). Move lengthy README output/security examples there. Document that unknown arguments currently run the suite; `--help`, filtering, JSON and self-check are not implemented. This is a documentation task, not a CLI behavior change.
 - [x] Link the guide, `TEST_MATRIX.md`, `TROUBLESHOOT.md`, `DESIGN_NOTES.md`, `MUSL_HOST_COMPATIBILITY.md` and `ROADMAP.md` from the README using relative links. Preserve the separate matrix, troubleshooting flow and scope exclusions. Label host-compatibility guidance as background for application authors: DNS/TLS and other application checks there are not implemented probe workflows. Keep planned features in the roadmap.
-- [x] Move README “Architecture” into `DESIGN_NOTES.md`; explain registry wiring and the exact-name security classification in `runner.rs`, so adding or renaming a test includes reviewing both. Add contributor guidance distinguishing `cargo test --locked` (three parser/ordering unit tests today) from executing the runtime suite; keep authoritative validation instructions in `AGENTS.md`.
+- [x] Move README “Architecture” into `DESIGN_NOTES.md`; explain registry wiring and the exact-name security classification in `runner.rs`, so adding or renaming a test includes reviewing both. Add contributor guidance distinguishing `cargo test --locked` (parser/ordering and resource/diagnostic regression tests) from executing the runtime suite; keep authoritative validation instructions in `AGENTS.md`.
 
 ### P2 — Accuracy and current limitations
 
 - [x] Correct the README provenance explanation: the musl field records a build-time sysroot where `libc.a` exists, not an extracted musl version or independent proof of which archive was linked. Keep `--version` provenance documentation aligned with `build.rs`.
 - [x] Replace blanket security claims in README/guide with actual SELinux/AppArmor detection and proactive skip behavior. Do not imply an unfamiliar AppArmor executable is necessarily unrestricted, that no detected framework means no restrictions, or that detection covers seccomp. Avoid presenting relabeling or a destination directory as a universal policy fix.
 - [x] Label sample output illustrative. Do not infer a distribution, guaranteed kernel version or security configuration from the sample kernel string; remove blanket WSL security claims. Preserve useful example pass/skip profiles without implying universal compatibility.
-- [x] In the guide and timing coverage documentation, disclose that the check labelled “monotonic clock” currently uses `SystemTime`; refer to the existing code-fix section below rather than duplicating or implementing that fix.
-- [x] Document fixed temporary names under `std::env::temp_dir()` (not always `/tmp`), sequential runs or separate absolute `TMPDIR` values as current precautions, and the absence of built-in timeouts. Link these limitations to the existing temporary-path and timeout work below; do not describe those fixes as complete.
+- [x] In the guide and timing coverage documentation, document the actual clock source and link the correctness work below; the original `SystemTime` limitation has now been fixed with `CLOCK_MONOTONIC`.
+- [x] Document temporary storage under `std::env::temp_dir()` (not always `/tmp`) and the absence of built-in timeouts. The earlier fixed-name limitation has now been resolved by private per-invocation directories; document remaining cleanup limits for aborts/signals. Timeout work remains planned.
 
 ## Recommended Additions
 
@@ -166,54 +166,11 @@ This is a cheap way to validate file metadata correctness, which matters for pac
 
 ## Fixes To Make First
 
-### Fix the incorrect monotonic clock test
+- [x] **Real monotonic timing:** `process::monotonic_clock` now reads `CLOCK_MONOTONIC` before and after its sleep, checks valid timespec values and rejects backwards/too-short elapsed time. The test name is unchanged. The original use of `SystemTime` was confirmed in source without changing the host clock.
+- [x] **Isolated temporary resources and cleanup:** filesystem and rename checks now use private directories atomically created by `mkdtemp` under the configured temporary base. Each invocation owns its directory; success and error paths clean it up, and a drop guard provides best-effort cleanup on unwind. Cleanup failures retain the original test error. Aborts/signals can still leave directories. Baseline reproduction found a stale symlink failure and one failure in 12 concurrent runs; after the fix, all 12 concurrent runs passed with no new leftovers and with seeded stale files preserved.
+- [x] **Immediate syscall diagnostics:** failures of `getrandom`, `memfd_create`, `renameat2` and clock reads capture `last_os_error` before formatting or cleanup. Messages include operation context, OS error text and numeric errno. A regression test verifies that a later syscall changing errno and directory cleanup do not replace the original diagnostic.
 
-Problem:
-The current `monotonic_clock` test uses `SystemTime`, which is wall clock time, not a monotonic clock source.
-
-What to change:
-- Replace it with a real `CLOCK_MONOTONIC` test via `libc::clock_gettime`, or equivalent direct monotonic timing logic
-- Rename the current test if it remains and is intended to validate wall clock progression instead
-
-Linux functionality actually being tested after the fix:
-- `clock_gettime(CLOCK_MONOTONIC)`
-- monotonic time progression unaffected by wall clock adjustments
-- libc interaction with kernel timekeeping APIs
-
-Why it matters for this project:
-Right now the test name overstates what is being validated. Fixing it keeps the suite technically honest and avoids reporting false coverage.
-
-### Fix temporary path collisions and cleanup robustness
-
-Problem:
-Several tests use stable names under `/tmp`, such as `musl_compat_rw` and `musl_renameat2`. That makes reruns and concurrent runs vulnerable to collisions or leftover files after a crash.
-
-What to change:
-- Generate unique per-run temp directories using PID, timestamp, randomness, or `mkdtemp`-style logic
-- Centralize temp resource creation and cleanup
-- Make cleanup best-effort on failure paths so one broken run does not poison the next
-
-Linux functionality actually being tested after the fix:
-- The same filesystem behaviors as today, but without false failures caused by reused pathnames
-- Crash-safe cleanup expectations for temp resources
-
-Why it matters for this project:
-This improves determinism. A compatibility suite should fail because the host is incompatible, not because a previous run left stale files behind.
-
-### Improve syscall error reporting to include `errno`
-
-Problem:
-The direct syscall tests currently report raw negative returns such as `renameat2 returned -1`, which is not enough to diagnose whether the failure was expected policy denial, missing kernel support, or a genuine bug.
-
-What to change:
-- Capture and report `std::io::Error::last_os_error()` after failing syscalls
-- Include the symbolic context in error messages where practical, for example `EPERM`, `ENOSYS`, or `EINVAL`
-
-Linux functionality actually being tested after the fix:
-- The same syscall paths as today, but with errors mapped to real Linux failure modes
-
-Why it matters for this project:
-This turns the suite from “pass/fail” into a usable diagnostics tool when something breaks on an older or more restricted host.
+Validation: [x86-64 Linux static musl CI run](https://github.com/rustcommons/rust-musl-libc-compat-test/actions/runs/41238463704) passed six unit tests, formatting of changed modules, Clippy (two existing style warnings in untouched modules), static ELF inspection, all 15 runtime checks and 12 concurrent runs. The static executable had no dynamic section/`NEEDED` entries. Native ARM64 GNU tests and runs also passed as supplementary evidence, not as a substitute for the musl gate. This does not certify older kernels or different host security policies.
 
 ## Broader Improvements
 
@@ -260,10 +217,11 @@ What to add:
 Why it matters:
 Not every regression requires a target Linux host to catch. The parsing and wiring code should be protected by fast local tests.
 
-### Add CI checks for static-linkage invariants
+### Extend CI checks for static-linkage invariants
 
-What to add:
-- A CI job that builds the musl target and verifies `ldd`, `file`, and `readelf -d` expectations
+The focused static-musl workflow now builds and verifies `file`, `ldd` and `readelf`, runs unit tests and the probe, and checks concurrent resource isolation. It prints version metadata. Broader metadata assertions remain future work.
+
+Remaining work:
 - A check that the binary still reports the expected build metadata fields
 
 Why it matters:

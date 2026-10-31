@@ -32,11 +32,12 @@ human-authored record of intent; tool attribution belongs in tool logs, not hist
 - [build.rs](build.rs): embeds compiler, linker-wrapper, target, timestamp and sysroot information. The musl field checks for sysroot `libc.a`; it does not extract a musl version or verify the archive actually linked.
 - [src/main.rs](src/main.rs): runs the suite; `--version` and `-V` print provenance. Other arguments currently fall through to running the suite. Help, filtering, JSON and self-check modes are not implemented.
 - [src/tests/mod.rs](src/tests/mod.rs): ordered registry of 15 runtime checks and kernel gates. Add implementations in the corresponding `src/tests/` module and wire requirements here.
+- [src/tests/support.rs](src/tests/support.rs): shared temporary-directory lifetime and errno capture, with isolation, error-cleanup and diagnostic regression tests.
 - [src/kernel.rs](src/kernel.rs): kernel detection/parsing and three parser/ordering unit tests.
 - [src/runner.rs](src/runner.rs): kernel gates precede security gates; security-sensitive classification matches exact test names. Normal completion exits 1 for any failure, otherwise 0, including expected skips.
 - [src/security.rs](src/security.rs): SELinux/AppArmor detection and execution-location warning. It does not detect all restrictions such as seccomp. Confined contexts proactively skip `memfd_create` and `renameat2`; `getrandom` is not security-gated.
 - Kernel minima in the registry are 3.15 for `renameat2` and 3.17 for `getrandom`/`memfd_create`. Ungated checks are not evidence of support for arbitrarily old kernels: `CLOCK_BOOTTIME` has its own prerequisite.
-- Runtime checks need no root, but need writable temporary storage, loopback and `/proc`. Temporary paths use `std::env::temp_dir()` with fixed names; avoid concurrent runs sharing that directory. There is no built-in timeout. The check labelled monotonic currently uses `SystemTime`; the roadmap tracks its correction.
+- Runtime checks need no root, but need writable temporary storage, loopback and `/proc`. Each filesystem/rename probe uses an atomically created private `mkdtemp` directory under `std::env::temp_dir()`, with cleanup on success and error. Aborts/signals can still leave directories. Timing uses `CLOCK_MONOTONIC`; syscall failures capture errno before cleanup. There is no built-in timeout.
 
 ## Validation
 
@@ -46,6 +47,7 @@ For relevant code changes, use a Linux build environment with Rust/Cargo support
 
 ```sh
 cargo test --locked
+cargo clippy --locked --all-targets
 cargo build --release --locked
 file target/x86_64-unknown-linux-musl/release/musl-compat-test
 ldd target/x86_64-unknown-linux-musl/release/musl-compat-test
@@ -55,3 +57,5 @@ readelf -d target/x86_64-unknown-linux-musl/release/musl-compat-test
 ```
 
 `cargo test` exercises unit tests, not the runtime probe registry. Expect static linkage, no dynamic `NEEDED` entries, and no unexpected runtime failures. `ldd` reporting "not a dynamic executable" is an expected diagnostic, not a conventional successful exit-status assertion. Interpret skips using [TEST_MATRIX.md](TEST_MATRIX.md). Validate compatibility claims on the actual target hosts; a local success is insufficient. See [TROUBLESHOOT.md](TROUBLESHOOT.md) and [MUSL_HOST_COMPATIBILITY.md](MUSL_HOST_COMPATIBILITY.md) for investigation and broader application guidance.
+
+[Static musl CI](.github/workflows/musl.yml) runs on hosted x86-64 Linux with two build/test workers. It checks formatting of the maintained probe modules, unit tests, Clippy, static ELF properties, the actual suite and concurrent runs. Repository-wide formatting predates this pass; avoid unrelated formatting churn. Clippy currently reports existing style warnings in `runner.rs` and `threading.rs`.

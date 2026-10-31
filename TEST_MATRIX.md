@@ -19,7 +19,7 @@ If a host produces something outside these expectations, treat it as a compatibi
 - The host has working loopback networking and writable temporary storage selected by `std::env::temp_dir()`.
 - The host is not missing standard runtime files needed by the process.
 
-The oldest illustrated profile is 3.12.x, not a declared minimum supported kernel. Ungated checks do not establish support for older kernels: `CLOCK_BOOTTIME` requires 2.6.39 and the binary/toolchain may impose other requirements. All expected passes depend on host facilities and policy. The confinement column assumes kernel >= 3.17; on older kernels, kernel skips take precedence. The “monotonic clock” label currently refers to a `SystemTime` check, not a monotonic source. See the [user guide](USER_GUIDE.md) for operational limitations.
+The oldest illustrated profile is 3.12.x, not a declared minimum supported kernel. Ungated checks do not establish support for older kernels: `CLOCK_BOOTTIME` requires 2.6.39 and the binary/toolchain may impose other requirements. All expected passes depend on host facilities and policy. The confinement column assumes kernel >= 3.17; on older kernels, kernel skips take precedence. The “monotonic clock” check uses `CLOCK_MONOTONIC`. See the [user guide](USER_GUIDE.md) for operational limitations.
 
 ## Legend
 

@@ -101,10 +101,10 @@ With SELinux detected, an executable path starting with `/tmp` triggers a warnin
 
 ## Current limitations
 
-- The check labelled “monotonic clock” uses `SystemTime`, so it currently measures wall-clock progression. Its correction remains planned.
-- Temporary paths use `std::env::temp_dir()` (including `TMPDIR` on Linux) and fixed names. Run sequentially or supply a separate existing, writable absolute `TMPDIR` for each run. Failed runs may leave files; inspect leftovers before reuse. This is a precaution, not implemented automatic isolation.
+- The “monotonic clock” check reads `CLOCK_MONOTONIC` before and after a short sleep; it does not depend on wall-clock adjustments.
+- Each filesystem/rename check creates a private, unique directory under `std::env::temp_dir()` (including `TMPDIR` on Linux). Normal success and error paths clean it up. Cleanup failures are reported without discarding the original test error; process aborts/signals can still leave directories. Use an existing writable temporary base.
 - There is no built-in timeout; I/O or synchronization can hang. Release builds abort on panic.
-- Direct syscall failures currently report limited error detail. Kernel availability, filesystem semantics and policy restrictions can differ even when a version gate passes.
+- Direct syscall failures include operation context, OS error text and numeric errno captured before cleanup. Kernel availability, filesystem semantics and policy restrictions can differ even when a version gate passes.
 - DNS, TLS trust, general application behavior and comprehensive libc compatibility are outside current coverage.
 
 See [scope and architecture](DESIGN_NOTES.md), [planned fixes](ROADMAP.md) and [troubleshooting](TROUBLESHOOT.md). The [host compatibility checklist](MUSL_HOST_COMPATIBILITY.md) covers broader application concerns that this executable does not test.

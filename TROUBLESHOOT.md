@@ -167,6 +167,8 @@ What to suspect here:
 - seccomp or container restrictions
 - a real bug in the test implementation
 
+Syscall failures now include operation context, OS error text and numeric errno captured before cleanup. Use that errno to distinguish policy denial from unavailable functionality; the kernel version alone does not establish the cause.
+
 Current security-sensitive tests in this suite:
 
 - `syscall: memfd_create(2)`
@@ -187,7 +189,7 @@ What to suspect:
 
 - unwritable temp directory
 - unusual mount flags
-- path collisions from previous failed runs
+- leftover directories after aborts/signals or cleanup failures (new runs use unique private directories)
 - policy restrictions on rename or symlink operations
 
 Affected test classes:
