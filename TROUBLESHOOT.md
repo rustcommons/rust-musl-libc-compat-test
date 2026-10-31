@@ -9,16 +9,18 @@ Check what kind of binary you actually copied:
 ```bash
 file ./musl-compat-test
 ldd ./musl-compat-test
-readelf -d ./musl-compat-test | grep NEEDED || true
+readelf -d ./musl-compat-test
 ```
 
 Expected:
 
-- `file` reports a statically linked musl ELF
+- `file` reports a statically linked ELF of the expected architecture (it does not establish the libc version)
 - `ldd` reports `not a dynamic executable`
 - `readelf -d` shows no `NEEDED` entries
 
-If execution is denied from `/tmp`, move the binary and retry:
+Inspect command errors as well as output. The expected `ldd` diagnostic can return nonzero; missing tools are not successful verification.
+
+If execution is denied from `/tmp`, choose a location allowed by host policy. For example, if your home directory permits execution:
 
 ```bash
 cp ./musl-compat-test ~/musl-compat-test
@@ -43,19 +45,19 @@ aa-status 2>/dev/null || true
 
 ## 2. The binary starts, but crashes immediately
 
-First check whether a trivial static musl binary works on the same host:
+An optional diagnostic is to check whether a trivial static musl binary works on the same host. The recipe below requires a C/musl toolchain; deployment hosts need not have one. If necessary, build on a suitable machine and transfer the resulting binary using the [user guide](USER_GUIDE.md). Use a scratch directory on the build machine and an execution location permitted by the test host. The following assumes the current scratch directory permits execution:
 
 ```bash
-cat > /tmp/hello.c << 'EOF'
+cat > ./hello.c << 'EOF'
 #include <stdio.h>
 int main() { puts("hello"); return 0; }
 EOF
-musl-gcc -static /tmp/hello.c -o /tmp/hello-musl
-file /tmp/hello-musl
-/tmp/hello-musl
+musl-gcc -static ./hello.c -o ./hello-musl
+file ./hello-musl
+./hello-musl
 ```
 
-If the trivial musl binary also fails, the problem is broader than this project.
+If the trivial musl binary also fails, investigate shared environment and build assumptions; its toolchain may differ from the Rust binary.
 
 Check whether a core file was written:
 
@@ -98,7 +100,7 @@ Current expected warning class:
 
 - execution from `/tmp` on SELinux hosts
 
-If you see the exec-from-`/tmp` warning:
+If you see the exec-from-`/tmp` warning, use an approved executable location. For example, only if your home directory permits execution:
 
 ```bash
 cp ./musl-compat-test ~/musl-compat-test
@@ -124,7 +126,7 @@ Then classify the outcome:
 - `SKIP (security)` under confinement can be expected
 - `FAIL` is the thing to investigate
 
-Use [`TEST_MATRIX.md`](/home/joey/GIT/rust-musl-libc-compat-test/TEST_MATRIX.md) to determine whether the result is expected for that kernel and security context.
+Use [`TEST_MATRIX.md`](TEST_MATRIX.md) to determine whether the result is expected for that kernel and security context.
 
 ## 5. A kernel-gated syscall test fails on an old host
 
@@ -172,7 +174,7 @@ Current security-sensitive tests in this suite:
 
 ## 7. Filesystem tests fail
 
-What to check:
+Check the actual temporary directory (`TMPDIR` when set, otherwise normally `/tmp`). The following `/tmp` checks apply only when it is the selected directory; substitute your actual path otherwise.
 
 ```bash
 echo "$TMPDIR"

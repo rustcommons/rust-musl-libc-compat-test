@@ -16,8 +16,10 @@ If a host produces something outside these expectations, treat it as a compatibi
 - The binary is built as a static musl executable.
 - The binary is run as an unprivileged user.
 - The binary is launched from an executable location.
-- The host has working loopback networking and a normal `/tmp`.
+- The host has working loopback networking and writable temporary storage selected by `std::env::temp_dir()`.
 - The host is not missing standard runtime files needed by the process.
+
+The oldest illustrated profile is 3.12.x, not a declared minimum supported kernel. Ungated checks do not establish support for older kernels: `CLOCK_BOOTTIME` requires 2.6.39 and the binary/toolchain may impose other requirements. All expected passes depend on host facilities and policy. The confinement column assumes kernel >= 3.17; on older kernels, kernel skips take precedence. The “monotonic clock” label currently refers to a `SystemTime` check, not a monotonic source. See the [user guide](USER_GUIDE.md) for operational limitations.
 
 ## Legend
 
@@ -29,7 +31,7 @@ If a host produces something outside these expectations, treat it as a compatibi
 
 ## Current Tests
 
-| Test | Kernel < 3.15 | Kernel 3.15-3.16 | Kernel >= 3.17 | Confined SELinux/AppArmor |
+| Test | Kernel 3.12-3.14 (example range) | Kernel 3.15-3.16 | Kernel >= 3.17 | Confined SELinux/AppArmor |
 | --- | --- | --- | --- | --- |
 | `env: set/get round-trip` | PASS | PASS | PASS | PASS |
 | `env: iterate environment` | PASS | PASS | PASS | PASS |
@@ -112,7 +114,7 @@ Treat these as investigation cases:
 - Any `FAIL` on tests that should `PASS` for the current kernel and security context
 - Any missing `SKIP (kernel)` on kernels older than the documented syscall minimum
 - Any failure to start the binary at all
-- Any DNS, certificate, mount, or runtime-file issue that prevents the suite from reaching test execution
+- Any mount or runtime-file issue that prevents test execution; DNS and certificate behavior are outside this suite
 
 ## Practical Reading Rule
 
@@ -120,7 +122,7 @@ Success does not always mean `15 PASS`.
 
 Success means:
 
-- all always-safe tests `PASS`
+- all ungated tests `PASS` under the baseline assumptions
 - kernel-gated tests `SKIP` on too-old kernels instead of failing
 - security-sensitive tests `SKIP (security)` when confinement is expected
 - no unexpected `FAIL` occurs

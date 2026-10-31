@@ -1,5 +1,7 @@
 # MUSL Host Compatibility
 
+This is background for application authors, not a list of checks implemented by `musl-compat-test`. DNS, TLS, locale and other application concerns below are outside the current probe coverage; see the [user guide](USER_GUIDE.md) for actual workflows.
+
 Use this document as an instruction sheet and pre-flight checklist when you build an application with musl and plan to run it on different Linux hosts with different kernel versions.
 
 ## What musl does and does not solve
@@ -50,7 +52,7 @@ getenforce 2>/dev/null || true
 aa-status 2>/dev/null || true
 file ./your-binary
 ldd ./your-binary
-readelf -d ./your-binary | grep NEEDED || true
+readelf -d ./your-binary
 ```
 
 What these checks tell you:
@@ -62,7 +64,7 @@ What these checks tell you:
 - `aa-status`: whether AppArmor is active
 - `file`: whether the binary is actually statically linked for the expected target
 - `ldd`: whether the binary is unexpectedly dynamic
-- `readelf -d | grep NEEDED`: whether any dynamic dependencies leaked into the build
+- `readelf -d`: inspect for dynamic `NEEDED` entries and check for inspection errors
 
 ## Pre-flight review
 

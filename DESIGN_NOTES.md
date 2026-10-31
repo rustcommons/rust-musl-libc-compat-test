@@ -44,3 +44,11 @@ The point of this project is to produce a small, interpretable signal:
 - are obvious security-context restrictions visible
 
 Once the scope gets much wider, failures become harder to interpret. This project is more useful as a narrow compatibility probe than as a pretend end-to-end certification suite.
+
+## Architecture and contributions
+
+`kernel.rs` detects and parses the host kernel independently of the tests. `runner.rs` handles gates, results and exit status. Implementations live in `src/tests/`; `src/tests/mod.rs` registers their names, function pointers and kernel requirements. `main.rs` dispatches version output or the suite, `security.rs` detects security context, and `build.rs` records build information.
+
+When adding a check, add its implementation and registry entry, then review security classification in `runner.rs`: policy-sensitive checks are matched by exact test name. Renaming a check can therefore change gating behavior. Keep the test matrix and user guide aligned with implemented coverage.
+
+Read [AGENTS.md](AGENTS.md) for authoritative constraints and validation. With its prerequisites installed, `cargo test --locked` currently runs three kernel parser/ordering unit tests; it does not execute the 15 registered runtime probes. Build and run `musl-compat-test` separately, inspect static linkage, and validate host-dependent claims on the relevant target hosts. Proposed behavior changes remain in [ROADMAP.md](ROADMAP.md).
