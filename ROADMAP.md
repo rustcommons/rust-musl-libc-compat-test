@@ -1,6 +1,33 @@
 # Roadmap
 
-This file captures the next test additions that are worth programming into the suite, along with the specific Linux functionality each one is intended to validate.
+This file tracks planned documentation work, code fixes, and runtime test additions. Documentation tasks below describe current behavior; they do not authorize or imply implementation of planned features.
+
+## Documentation tasks (prioritized)
+
+All tasks below are unchecked future work. P1 addresses setup and command correctness; P2 addresses organization, accuracy and contributor guidance. Existing code fixes and feature proposals remain in their own sections below.
+
+### P1 — Setup and command correctness
+
+- [ ] Expand `README.md` “Build & Verify” with source installation prerequisites: Linux build environment, Rust/Cargo supporting edition 2024, the `x86_64-unknown-linux-musl` Rust target, and `musl-gcc`. Include clone, `cd`, `rustup target add x86_64-unknown-linux-musl`, `cargo build --release --locked`, and the resulting binary path. Explain `.cargo/config.toml`, Cargo-managed `libc`, and the distinction between build tools and runtime-host requirements. Do not invent a crates.io install or release-download workflow.
+- [ ] Keep static verification in the README and explain the required `file`, `ldd`, and `readelf` tools: expect static linkage and no `NEEDED` entries. Explain that the expected `ldd` diagnostic and a no-match `grep NEEDED` need not return zero; avoid hiding a missing tool or failed inspection as a successful check.
+- [ ] Fix README transfer instructions to include remote execution and an explicit destination: `scp target/x86_64-unknown-linux-musl/release/musl-compat-test user@host:` followed by `ssh user@host './musl-compat-test'`. Explain that the destination must allow execution; neither `/tmp` nor a home directory is guaranteed executable by policy.
+- [ ] Replace the absolute `/home/joey/GIT/.../TEST_MATRIX.md` link in `TROUBLESHOOT.md` section 4 with `[TEST_MATRIX.md](TEST_MATRIX.md)`.
+- [ ] In `TROUBLESHOOT.md` section 2, label the C smoke-test recipe as requiring a C/musl toolchain, which deployment hosts need not have. Build it on a suitable build host if necessary and run it from a location permitting execution rather than assuming `/tmp` does.
+
+### P2 — Reader paths and implemented workflows
+
+- [ ] Refocus `README.md` on purpose, limited scope, prerequisites, quick start, static checks, no-root runtime requirements and relative documentation links. State that the package `rust-musl-libc-compat-test` builds the executable `musl-compat-test`, a focused runtime probe rather than a library or application-certification suite.
+- [ ] Add `USER_GUIDE.md` for detailed source build/static verification, local execution, remote transfer/execution, `--version`/`-V`, output interpretation, kernel/security skips and exit status (normal completion: 0 without failures, 1 with failures). Move lengthy README output/security examples there. Document that unknown arguments currently run the suite; `--help`, filtering, JSON and self-check are not implemented. This is a documentation task, not a CLI behavior change.
+- [ ] Link the guide, `TEST_MATRIX.md`, `TROUBLESHOOT.md`, `DESIGN_NOTES.md`, `MUSL_HOST_COMPATIBILITY.md` and `ROADMAP.md` from the README using relative links. Preserve the separate matrix, troubleshooting flow and scope exclusions. Label host-compatibility guidance as background for application authors: DNS/TLS and other application checks there are not implemented probe workflows. Keep planned features in the roadmap.
+- [ ] Move README “Architecture” into `DESIGN_NOTES.md`; explain registry wiring and the exact-name security classification in `runner.rs`, so adding or renaming a test includes reviewing both. Add contributor guidance distinguishing `cargo test --locked` (three parser/ordering unit tests today) from executing the runtime suite; keep authoritative validation instructions in `AGENTS.md`.
+
+### P2 — Accuracy and current limitations
+
+- [ ] Correct the README provenance explanation: the musl field records a build-time sysroot where `libc.a` exists, not an extracted musl version or independent proof of which archive was linked. Keep `--version` provenance documentation aligned with `build.rs`.
+- [ ] Replace blanket security claims in README/guide with actual SELinux/AppArmor detection and proactive skip behavior. Do not imply an unfamiliar AppArmor executable is necessarily unrestricted, that no detected framework means no restrictions, or that detection covers seccomp. Avoid presenting relabeling or a destination directory as a universal policy fix.
+- [ ] Label sample output illustrative. Do not infer a distribution, guaranteed kernel version or security configuration from the sample kernel string; remove blanket WSL security claims. Preserve useful example pass/skip profiles without implying universal compatibility.
+- [ ] In the guide and timing coverage documentation, disclose that the check labelled “monotonic clock” currently uses `SystemTime`; refer to the existing code-fix section below rather than duplicating or implementing that fix.
+- [ ] Document fixed temporary names under `std::env::temp_dir()` (not always `/tmp`), sequential runs or separate absolute `TMPDIR` values as current precautions, and the absence of built-in timeouts. Link these limitations to the existing temporary-path and timeout work below; do not describe those fixes as complete.
 
 ## Recommended Additions
 
@@ -242,11 +269,8 @@ What to add:
 Why it matters:
 This project’s central claim is “static musl binary with predictable behavior.” Static-linkage regressions should be caught automatically before anyone copies an artifact to a test host.
 
-### Improve documentation around expected skip behavior
+### Complete documentation around expected skip behavior
 
-What to add:
-- A matrix showing which tests are expected to `PASS`, `SKIP`, or potentially `SKIP (security)` on older kernels and under confined MAC contexts
-- A short section distinguishing unsupported-kernel skips from true failures
+`TEST_MATRIX.md` already contains pass/skip profiles and distinguishes skips from failures. Preserve that delivered work rather than planning another matrix.
 
-Why it matters:
-The suite already has gating logic, but the operator guidance still lives mostly in prose. A compact matrix would make interpreting results faster and less error-prone.
+- [ ] **P2, documentation:** Qualify the “Kernel < 3.15” column and its baseline assumptions so it does not claim support for arbitrarily old kernels; the ungated `CLOCK_BOOTTIME` check has a prerequisite noted in `src/tests/process.rs`. Keep expected outcomes conditional on host facilities and security context, and reference this matrix from the user guide instead of duplicating it.
