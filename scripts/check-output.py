@@ -17,7 +17,7 @@ def check(result, expected, diagnostic=False):
 with tempfile.TemporaryDirectory() as root:
     env = dict(os.environ, TMPDIR=root)
     for args in ([], ["--version"], ["-V"]):
-        # A reader already gone when the process starts.
+        # Deterministic BrokenPipe: the reader is gone before the process starts.
         reader, writer = os.pipe()
         os.close(reader)
         try:
@@ -26,7 +26,9 @@ with tempfile.TemporaryDirectory() as root:
         finally:
             os.close(writer)
 
-        # A downstream consumer reads a line then exits early.
+        # Smoke test: a consumer reads a line then exits early. Short version
+        # output may already be fully written; the pre-closed case above
+        # guarantees BrokenPipe regardless of scheduling.
         process = subprocess.Popen([binary, *args], stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, env=env)
         assert process.stdout.readline()

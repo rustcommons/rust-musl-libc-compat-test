@@ -34,6 +34,7 @@ human-authored record of intent; tool attribution belongs in tool logs, not hist
 - [src/tests/mod.rs](src/tests/mod.rs): ordered registry of 15 runtime checks and kernel gates. Add implementations in the corresponding `src/tests/` module and wire requirements here.
 - [src/tests/support.rs](src/tests/support.rs): shared temporary-directory lifetime and errno capture, with isolation, error-cleanup and diagnostic regression tests.
 - [src/kernel.rs](src/kernel.rs): kernel detection/parsing and three parser/ordering unit tests.
+- The main thread holds the stdout lock for the whole run. Probe worker threads must return results to the runner rather than print to stdout; a worker trying to print while the main thread joins it can deadlock. Current probes do not print from workers.
 - [src/output.rs](src/output.rs): fallible stdout for version and suite output; ignore only `BrokenPipe`, finish all probes, flush explicitly, preserve probe failures and return failure for other output errors.
 - [src/runner.rs](src/runner.rs): kernel gates precede security gates; security-sensitive classification matches exact test names. Probe results use 1 for any failure, otherwise 0, including expected skips; output failures other than `BrokenPipe` also produce exit 1.
 - [src/security.rs](src/security.rs): SELinux/AppArmor detection and execution-location warning. It does not detect all restrictions such as seccomp. Confined contexts proactively skip `memfd_create` and `renameat2`; `getrandom` is not security-gated.
