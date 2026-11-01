@@ -172,6 +172,11 @@ This is a cheap way to validate file metadata correctness, which matters for pac
 
 Validation: [x86-64 Linux static musl CI run](https://github.com/rustcommons/rust-musl-libc-compat-test/actions/runs/41238463704) passed six unit tests, formatting of changed modules, Clippy (two existing style warnings in untouched modules), static ELF inspection, all 15 runtime checks and 12 concurrent runs. The static executable had no dynamic section/`NEEDED` entries. Native ARM64 GNU tests and runs also passed as supplementary evidence, not as a substitute for the musl gate. This does not certify older kernels or different host security policies.
 
+## Independent review follow-up
+
+- [x] **F6: fallible stdout:** replace panic-on-write output in suite/version modes; ignore only `BrokenPipe`, continue checks/cleanup, retain failed-probe status, and surface other write/final-flush errors through best-effort stderr plus exit 1. Regression coverage includes injected flush errors, closed/early-closing pipes, `/dev/full`, and real probe failures.
+- [ ] **Compiler provenance (separate from F6):** `build.rs` queries `rustc` through `PATH` for version and sysroot instead of Cargo's `RUSTC`. Use Cargo's selected compiler for these queries, handle unsuccessful commands, and test a PATH/RUSTC mismatch plus wrapper behavior. Determine explicitly whether wrappers should participate in metadata queries rather than treating a wrapper executable as the compiler or naively concatenating `RUSTC_WRAPPER`/`RUSTC_WORKSPACE_WRAPPER`. Keep compiler identity separate from wrapper metadata. This warrants a separate tested change; it must not claim to identify the actual musl version or linked archive.
+
 ## Broader Improvements
 
 ### Add machine-readable output mode
