@@ -22,7 +22,7 @@ jobs:
           rustup component add rustfmt clippy
           rustup target add x86_64-unknown-linux-musl
       - name: Check formatting of maintained modules
-        run: rustfmt --check --edition 2024 --config skip_children=true src/tests/support.rs src/tests/process.rs src/tests/filesystem.rs src/tests/syscalls.rs
+        run: rustfmt --check --edition 2024 --config skip_children=true src/main.rs src/output.rs src/runner.rs src/tests/support.rs src/tests/process.rs src/tests/filesystem.rs src/tests/syscalls.rs
       - name: Unit tests and lint
         run: |
           cargo test --locked
@@ -63,3 +63,5 @@ jobs:
               assert (stale / 'link.txt').read_text() == 'preserve me'
               assert list(pathlib.Path(root).iterdir()) == [stale]
               print('12 concurrent runs passed; private resources cleaned; stale user data preserved')
+      - name: Stdout failure regressions
+        run: python3 scripts/check-output.py target/x86_64-unknown-linux-musl/release/musl-compat-test

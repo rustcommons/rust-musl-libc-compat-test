@@ -45,7 +45,7 @@ Confirm that the destination has the expected architecture and permits execution
 
 ## Read results and exit status
 
-On normal completion the process returns `0` if there are no failed checks, including when checks are skipped, and `1` if any check fails. Version mode returns `0`. A crash, signal or failure to launch does not follow that summary contract. For local inspection, capture the status immediately:
+On normal completion the process returns `0` if there are no failed checks, including when checks are skipped, and `1` if any check fails. Version mode returns `0` unless stdout reports a write or final-flush error other than `BrokenPipe`. A crash, signal or failure to launch does not follow that summary contract. For local inspection, capture the status immediately:
 
 ```sh
 ./target/x86_64-unknown-linux-musl/release/musl-compat-test
@@ -54,6 +54,8 @@ printf 'Exit status: %s\n' "$probe_status"
 ```
 
 A remote SSH command also exposes the remote command's status, but connection or launch failures must be distinguished from a completed probe run. There is no structured output mode.
+
+If a downstream reader closes stdout, the probe ignores `BrokenPipe`, continues all checks and cleanup, and preserves the probe exit status (including failures). Other stdout write or final-flush failures return `1` and are reported to stderr on a best-effort basis without panicking. If stderr is also unavailable, the nonzero status is the remaining signal. Output failure does not stop the suite early.
 
 The [test matrix](TEST_MATRIX.md) is the canonical list of expected profiles. Kernel gating happens before security gating. `renameat2` requires 3.15; `getrandom` and `memfd_create` require 3.17. These thresholds do not establish a minimum supported kernel for the whole binary.
 
@@ -79,7 +81,7 @@ Spacing is abbreviated. Distribution names, WSL usage and kernel strings alone d
 
 The run header includes kernel, architecture, security summary, UID, compiler information and a musl sysroot field. Version mode additionally displays package version, linker-wrapper information, build target and Unix timestamp.
 
-These build fields are captured by `build.rs`; paths refer to the build machine even when the binary runs elsewhere. The musl field reports a sysroot where `libc.a` was found. It does not extract the musl version or independently establish which archive the linker used. The wrapper version field can be `unknown` because the script reads standard error from `musl-gcc --version`. Treat these fields as diagnostic context, alongside artifact inspection, not full provenance verification.
+These build fields are captured by `build.rs`, which currently queries `rustc` on `PATH` rather than Cargo's `RUSTC`; compiler/sysroot metadata can therefore differ when custom compilers or wrappers are used. This limitation is tracked separately in the roadmap. Paths refer to the build machine even when the binary runs elsewhere. The musl field reports a sysroot where `libc.a` was found. It does not extract the musl version or independently establish which archive the linker used. The wrapper version field can be `unknown` because the script reads standard error from `musl-gcc --version`. Treat these fields as diagnostic context, alongside artifact inspection, not full provenance verification.
 
 ## Security scenarios
 
