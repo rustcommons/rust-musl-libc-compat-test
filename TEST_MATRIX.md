@@ -17,7 +17,7 @@ If a host produces something outside these expectations, treat it as a compatibi
 - The binary is run as an unprivileged user.
 - The binary is launched from an executable location.
 - The host has working loopback networking and writable temporary storage selected by `std::env::temp_dir()`.
-- The host is not missing standard runtime files needed by the process.
+- The host exposes `/proc/self/exe` and is not missing runtime facilities needed by the process.
 
 The oldest illustrated profile is 3.12.x, not a declared minimum supported kernel. Ungated checks do not establish support for older kernels: `CLOCK_BOOTTIME` requires 2.6.39 and the binary/toolchain may impose other requirements. All expected passes depend on host facilities and policy. The confinement column assumes kernel >= 3.17; on older kernels, kernel skips take precedence. The “monotonic clock” check uses `CLOCK_MONOTONIC`. See the [user guide](USER_GUIDE.md) for operational limitations.
 
@@ -105,7 +105,7 @@ These are not test results, but they affect interpretation:
 
 - Running from `/tmp` on an SELinux host may produce a `WARN` about `tmp_t` execution restrictions.
 - That warning is expected and should not be interpreted as a failed test.
-- A host that refuses to execute the binary from `/tmp` is not a surprise condition; retry from `~/` or another executable location.
+- A host that refuses to execute the binary from `/tmp` is not a surprise condition; retry from a location permitted by host policy, which may be `~/` if execution there is allowed.
 
 ## Unexpected Outcomes
 

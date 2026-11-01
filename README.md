@@ -37,6 +37,8 @@ The destination needs a compatible x86-64 Linux environment, an executable launc
 
 ## Documentation
 
+This repository is not published on crates.io. The manifest version is not a published-package or host-qualification claim.
+
 - [User guide](USER_GUIDE.md): build, run, transfer, provenance, results and security scenarios.
 - [Test matrix](TEST_MATRIX.md): expected kernel and security skips.
 - [Troubleshooting](TROUBLESHOOT.md): investigate startup and runtime failures.
@@ -44,3 +46,4 @@ The destination needs a compatible x86-64 Linux environment, an executable launc
 - [Musl host compatibility](MUSL_HOST_COMPATIBILITY.md): broader guidance for application authors, beyond this probe's coverage.
 - [Roadmap](ROADMAP.md): planned code fixes and features.
 - [Repository instructions](AGENTS.md): authoritative working conventions and validation.
+- [Requirements and documentation map](docs/REQUIREMENTS.md): confirmed constraints, bounded evidence, and remaining gaps.
