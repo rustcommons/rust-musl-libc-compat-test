@@ -9,9 +9,8 @@ fn main() {
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
         .unwrap_or_else(|_| "unknown".into());
 
-    // musl-gcc version — this is the linker wrapper, tells us the system musl
-    // Note: the musl *libc* linked in comes from the Rust toolchain, not this,
-    // but recording both is useful for diagnosing linker issues
+    // Linker-wrapper diagnostic, not the musl libc version or linked-archive proof.
+    // Only stderr is read; wrappers printing their version to stdout yield "unknown".
     let musl_gcc = Command::new("musl-gcc")
         .arg("--version")
         .output()
@@ -19,8 +18,7 @@ fn main() {
                      .unwrap_or("unknown").to_string())
         .unwrap_or_else(|_| "not found".into());
 
-    // The musl libc version bundled *inside* the Rust toolchain.
-    // It lives in the sysroot — find it and extract the version from the header.
+    // Diagnostic sysroot location when libc.a exists, not an extracted version.
     let musl_sysroot_version = musl_version_from_sysroot()
         .unwrap_or_else(|| "unknown".into());
 
@@ -36,19 +34,12 @@ fn main() {
     println!("cargo:rustc-env=BUILD_TIMESTAMP={}", timestamp);
     println!("cargo:rustc-env=BUILD_TARGET={}", env::var("TARGET").unwrap_or_default());
 
-    // Re-run only if the toolchain actually changes, not on every build
+    // This explicit file trigger watches build.rs, not compiler or wrapper changes.
     println!("cargo:rerun-if-changed=build.rs");
 }
 
-/// Locate the musl version header inside the Rust toolchain's bundled sysroot.
-/// Rust installs musl headers at:
-///   ~/.rustup/toolchains/<toolchain>/lib/rustlib/x86_64-unknown-linux-musl/
-///     ... which doesn't have a version file directly, but the musl
-///   include path has <features.h> with a __musl__ define (no version there),
-///   however the version.h or Makefile equivalent is in the source.
-///
-/// The most reliable approach: ask rustc for the sysroot, then check the
-/// musl include path for version.h.
+/// Report the PATH rustc sysroot if its x86-64 musl libc.a exists.
+/// This does not extract a musl version or establish which archive was linked.
 fn musl_version_from_sysroot() -> Option<String> {
     let sysroot = Command::new("rustc")
         .args(["--print", "sysroot"])
@@ -56,13 +47,7 @@ fn musl_version_from_sysroot() -> Option<String> {
         .ok()
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())?;
 
-    // musl headers are at <sysroot>/lib/rustlib/x86_64-unknown-linux-musl/include
-    // but version info is harder to extract from headers alone.
-    // The definitive source: look for the musl version in the bundled
-    // libc.rlib debug info or the musl source version string.
-    //
-    // Practical fallback: extract from the libc crate's known mapping,
-    // or just record the Rust toolchain version and let that imply musl version.
+    // The archive's presence is diagnostic context only.
     let version_paths = [
         format!("{}/lib/rustlib/x86_64-unknown-linux-musl/lib/self-contained/libc.a", sysroot),
     ];
