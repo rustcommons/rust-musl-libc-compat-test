@@ -49,6 +49,42 @@ Once the scope gets much wider, failures become harder to interpret. This projec
 
 `kernel.rs` detects and parses the host kernel independently of the tests. `runner.rs` handles gates, results and exit status. Implementations live in `src/tests/`; `src/tests/mod.rs` registers their names, function pointers and kernel requirements. `main.rs` dispatches version output or the suite, `security.rs` detects security context, and `build.rs` records build information.
 
+### Runtime flow
+
+The diagrams describe normal completion paths in [main.rs](src/main.rs), [runner.rs](src/runner.rs), the [ordered registry](src/tests/mod.rs), [kernel detection](src/kernel.rs), [security detection](src/security.rs) and [fallible output](src/output.rs). They illustrate existing requirements MUSL-REQ-005 through MUSL-REQ-007 and MUSL-REQ-011 through MUSL-REQ-014 in the [trace index](docs/REQUIREMENTS.md#requirements); they add no CLI modes or compatibility claims.
+
+```mermaid
+flowchart TD
+    Main["main: lock stdout and read arguments"] --> Version{"--version or -V present?"}
+    Version -->|Yes| Info["Print build hints; initial status 0"]
+    Version -->|No| Host["Detect kernel; runner detects SELinux/AppArmor"]
+    Host --> Run["Runner: evaluate all 15 registry entries in order"]
+    Run --> Summary["Count outcomes; status 1 if any FAIL, else 0"]
+    Info --> Finish["Output.finish: final flush; other stdout errors force 1"]
+    Summary --> Finish
+    Finish --> Exit["Exit with final status"]
+```
+
+Version mode bypasses kernel/security detection and all probes; other arguments run the suite. Build fields from [build.rs](build.rs) are reported diagnostic hints: PATH `rustc` can differ from Cargo's selected compiler, and finding sysroot `libc.a` establishes neither a musl version nor which archive was linked. Use the [artifact checks](README.md#verify-the-artifact) to inspect linkage separately.
+
+For each registry entry, the runner applies these gates before calling its probe:
+
+```mermaid
+flowchart TD
+    Entry["Registry entry: name, minimum kernel, probe function"] --> Kernel{"Below entry's kernel minimum?"}
+    Kernel -->|Yes| SkipKernel["SKIP: kernel"]
+    Kernel -->|No minimum or new enough| Security{"Detected confinement and exact sensitive name?"}
+    Security -->|Yes| SkipSecurity["SKIP: security"]
+    Security -->|No| Probe["Call probe: Ok gives PASS; Err gives FAIL"]
+    SkipKernel --> Count["Return outcome to runner; continue registry"]
+    SkipSecurity --> Count
+    Probe --> Count
+```
+
+`renameat2` has a 3.15 gate; `getrandom` and `memfd_create` have 3.17 gates. Only the exact `memfd_create` and `renameat2` test names are security-sensitive. Detection does not cover seccomp or all host policy, and ungated entries do not imply support on every older kernel; see the [conditional matrix](TEST_MATRIX.md).
+
+All suite/version writes use `Output`. A write error stops further printing, while probes, cleanup and outcome counting continue. `BrokenPipe` alone preserves the status; other write or final-flush errors force 1 with best-effort stderr. Skips alone yield 0. Signals, aborts and launch failures are outside this normal-completion flow; there is no built-in timeout.
+
 When adding a check, add its implementation and registry entry, then review security classification in `runner.rs`: policy-sensitive checks are matched by exact test name. Renaming a check can therefore change gating behavior. Keep the test matrix and user guide aligned with implemented coverage.
 
 Read [AGENTS.md](AGENTS.md) for authoritative constraints and validation. With its prerequisites installed, `cargo test --locked` runs kernel parser/ordering, temporary-resource/diagnostic and fallible-output regression tests; it does not execute the 15 registered runtime probes. Build and run `musl-compat-test` separately, inspect static linkage, and validate host-dependent claims on the relevant target hosts. Proposed behavior changes remain in [ROADMAP.md](ROADMAP.md).

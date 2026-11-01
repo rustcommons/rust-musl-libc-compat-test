@@ -42,7 +42,7 @@ The repository is not published on crates.io; `0.1.0` in the manifest is not a p
 | [USER_GUIDE.md](../USER_GUIDE.md) | Maintained guide | Detailed execution/transfer, CLI, output/status, provenance and security scenarios; examples are illustrative. Keep this root path. |
 | [TEST_MATRIX.md](../TEST_MATRIX.md) | Maintained reference | Conditional expected pass/skip profiles; not a dated host qualification result. |
 | [TROUBLESHOOT.md](../TROUBLESHOOT.md) | Maintained guide | Startup and runtime investigation; optional diagnostics may need extra host tools. |
-| [DESIGN_NOTES.md](../DESIGN_NOTES.md) | Maintained reference | Scope exclusions, architecture and contributor wiring; defers working rules to AGENTS. |
+| [DESIGN_NOTES.md](../DESIGN_NOTES.md#runtime-flow) | Maintained reference | Scope exclusions, source-backed Mermaid runtime/gating flow for MUSL-REQ-005–007 and MUSL-REQ-011–014, and contributor wiring; defers working rules to AGENTS. |
 | [MUSL_HOST_COMPATIBILITY.md](../MUSL_HOST_COMPATIBILITY.md) | Maintained guide | Broader application-author background and release checklist, beyond probe coverage; not a prebuilt distribution authorization. |
 | [ROADMAP.md](../ROADMAP.md) | Planned / historical evidence | Unchecked proposals remain planned; checked documentation/F6/correctness work records delivery. Dated validation paragraphs preserve earlier outcomes and point to this index for later evidence. |
 | [AGENTS.md](../AGENTS.md) | Maintained reference | Primary repository working/Git/technical/validation rules; links the shared convention and this trace index. |
