@@ -1,5 +1,9 @@
 # Rust Musl Libc Compat Test
 
+[![CI](https://github.com/rustcommons/rust-musl-libc-compat-test/actions/workflows/musl.yml/badge.svg)](https://github.com/rustcommons/rust-musl-libc-compat-test/actions/workflows/musl.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/rustcommons/rust-musl-libc-compat-test/badge)](https://scorecard.dev/viewer/?uri=github.com/rustcommons/rust-musl-libc-compat-test)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 A focused Rust runtime probe for static musl compatibility across Linux kernels and host security contexts. The package `rust-musl-libc-compat-test` builds the `musl-compat-test` executable, not a library API.
 
 A successful run validates only the operations exercised by this probe. It does not certify arbitrary musl applications, complete libc coverage, or DNS/TLS behavior.

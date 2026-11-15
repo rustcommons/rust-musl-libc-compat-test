@@ -1,0 +1,24 @@
+# The configured product target; this audits dependencies, not runtime compatibility.
+[graph]
+targets = ["x86_64-unknown-linux-musl"]
+all-features = true
+
+[advisories]
+db-urls = ["https://github.com/rustsec/advisory-db"]
+unmaintained = "all"
+yanked = "deny"
+ignore = []
+
+[licenses]
+# Repository LICENSE is Apache-2.0; libc is MIT OR Apache-2.0.
+allow = ["Apache-2.0", "MIT"]
+confidence-threshold = 0.93
+
+[bans]
+multiple-versions = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
