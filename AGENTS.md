@@ -43,6 +43,15 @@ human-authored record of intent; tool attribution belongs in tool logs, not hist
 - When backfilling history, reconstruct facts from existing tags, registry records and source/evidence. Preserve original source identities, distinguish original release dates from documentation backfill dates, and state unavailable historical validation. Never fabricate checks, move tags, republish versions, or imply that repository edits change immutable published archives.
 - For an organization profile, placeholder or project with no shipped version, record release verification as not applicable until its first authorized release. Do not invent versions, features, changelog history or GitHub Releases to satisfy this convention.
 
+## Security maintenance
+
+- All changes to `main` go through pull requests. The `protect-main` ruleset requires `lf-only`; never push directly to `main` or bypass review as routine practice. Preserve release-tag immutability.
+- Pin every third-party GitHub Action to its full commit SHA with a trailing version-tag comment. Disable checkout credential persistence. Keep workflow permissions read-only and grant necessary writes only to the job that needs them.
+- Keep weekly Cargo and GitHub Actions Dependabot updates configured. Review dependency changes through PRs.
+- Before merging, require green `lf-only`, static musl CI, `zizmor` and `cargo-deny` checks. Fix security findings; any suppression must be narrow, explained inline and reviewed. `deny.toml` checks RustSec advisories (including unmaintained crates), rejects yanked dependencies, restricts licenses and sources, and warns on duplicate versions.
+- Scorecard runs on `main` pushes and weekly, publishing results and uploading SARIF with job-scoped permissions. A configured workflow is not evidence of a published score or SLSA certification.
+- This repository has no shipped tags, GitHub Releases or published crates as inspected on 2026-11-15. Trusted Publishing, binary release SBOMs and release provenance are not applicable until an authorized release/distribution plan changes that scope. Do not add a SLSA badge without verified evidence.
+
 ## Source map and constraints
 
 - [Cargo.toml](Cargo.toml): Rust edition 2024, sole dependency `libc`, release LTO and `panic = "abort"`. [Cargo.lock](Cargo.lock) records dependency versions.
