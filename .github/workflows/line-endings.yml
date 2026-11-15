@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# New commits supersede earlier runs for the same PR; main uses its own group.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 

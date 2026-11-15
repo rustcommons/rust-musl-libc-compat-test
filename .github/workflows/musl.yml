@@ -1,8 +1,13 @@
 name: Static musl probe
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
+# New commits supersede earlier runs for the same PR; main uses its own group.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -30,6 +35,8 @@ jobs:
           cargo test --locked
           cargo clippy --locked --all-targets
       - name: Build and inspect static executable
+        # Dependabot PRs keep formatting, unit tests and Clippy above; qualification runs on main.
+        if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
         shell: bash
         run: |
           cargo build --release --locked
@@ -48,6 +55,8 @@ jobs:
           "$binary" | tee /tmp/musl-run.txt
           grep -q 'results: 15 passed, 0 skipped, 0 failed' /tmp/musl-run.txt
       - name: Concurrent runtime isolation
+        # Dependabot PRs keep formatting, unit tests and Clippy above; qualification runs on main.
+        if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
         shell: python
         run: |
           import concurrent.futures, os, pathlib, subprocess, tempfile
@@ -66,4 +75,6 @@ jobs:
               assert list(pathlib.Path(root).iterdir()) == [stale]
               print('12 concurrent runs passed; private resources cleaned; stale user data preserved')
       - name: Stdout failure regressions
+        # Dependabot PRs keep formatting, unit tests and Clippy above; qualification runs on main.
+        if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
         run: python3 scripts/check-output.py target/x86_64-unknown-linux-musl/release/musl-compat-test
