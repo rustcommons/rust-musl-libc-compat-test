@@ -56,7 +56,6 @@ The repository is not published on crates.io; `0.1.0` in the manifest is not a p
 | [musl.yml](../.github/workflows/musl.yml), [check-output.py](../scripts/check-output.py) | Maintained reference | Executable validation procedure, with bounded hosted-native scope. |
 | [CI 41264143523](https://github.com/rustcommons/rust-musl-libc-compat-test/actions/runs/41264143523), [CI 41238463704](https://github.com/rustcommons/rust-musl-libc-compat-test/actions/runs/41238463704) | Historical evidence | Exact dated revisions and outcomes above; current instructions remain in AGENTS and the guides. |
 | [LICENSE](../LICENSE) | Maintained reference | Existing repository license; no legal or redistribution gate is changed by this audit. |
-
 | [Security checks](../.github/workflows/security.yml), [Scorecard](../.github/workflows/scorecard.yml), [Dependabot](../.github/dependabot.yml), [deny.toml](../deny.toml) | Maintained reference | Security automation and dependency policy; main-only Scorecard publication needs post-merge evidence. |
 
 ## Maintenance
