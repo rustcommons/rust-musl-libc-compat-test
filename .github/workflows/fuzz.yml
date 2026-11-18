@@ -1,0 +1,46 @@
+name: Parser fuzzing
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '31 7 * * 1'
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  kernel-version:
+    # Keep Dependabot PRs on core checks; main and weekly runs cover the fuzz graph.
+    if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CARGO_BUILD_JOBS: 2
+      FUZZ_SECONDS: ${{ github.event_name == 'pull_request' && '30' || '300' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned development tools
+        run: |
+          rustup toolchain install nightly-2026-11-15 --profile minimal
+          cargo +nightly-2026-11-15 install cargo-fuzz --version 0.13.2 --locked --target x86_64-unknown-linux-gnu --jobs 2
+      - name: Fuzz production kernel parser with AddressSanitizer
+        run: |
+          cp -R fuzz/seeds/kernel_version "$RUNNER_TEMP/kernel-version-corpus"
+          # cargo-fuzz 0.13.2 has no --locked flag: prefetch locked, run offline, verify no drift.
+          cargo +nightly-2026-11-15 fetch --manifest-path fuzz/Cargo.toml --locked --target x86_64-unknown-linux-gnu
+          cp fuzz/Cargo.lock "$RUNNER_TEMP/fuzz-Cargo.lock"
+          CARGO_NET_OFFLINE=true cargo +nightly-2026-11-15 fuzz run kernel_version "$RUNNER_TEMP/kernel-version-corpus" --target x86_64-unknown-linux-gnu --sanitizer address -- -max_total_time="$FUZZ_SECONDS" -max_len=4096 -timeout=5 -rss_limit_mb=1024
+          cmp fuzz/Cargo.lock "$RUNNER_TEMP/fuzz-Cargo.lock"
+      - name: Preserve crash reproductions
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kernel-version-fuzz-crashes
+          path: fuzz/artifacts/kernel_version/
+          if-no-files-found: ignore
+          retention-days: 7

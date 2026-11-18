@@ -22,6 +22,7 @@ documentation. This holds even if an agent's default instructions suggest it, an
 overrides any default trailer or footer behavior. Commit messages and PRs are the
 human-authored record of intent; tool attribution belongs in tool logs, not history.
 
+- Never use `[skip ci]` or `[ci skip]` in commit or merge messages: keep CodeQL and CI enabled for every change.
 - Pull before every push. Use `git pull --rebase` for ordinary unpushed commits; use `git pull --no-rebase` if they include a merge commit.
 - Never force-push or discard another contributor's changes. Resolve conflicts only when the intended result is clear; otherwise ask.
 
@@ -50,6 +51,7 @@ human-authored record of intent; tool attribution belongs in tool logs, not hist
 - Keep monthly Cargo and GitHub Actions Dependabot version updates configured, with at most two open version-update PRs per ecosystem, grouping and a seven-day cooldown. Security updates stay immediate and are independent of the version-update schedule. Review dependency changes through PRs; do not merge Dependabot PRs without authorization.
 - Use per-PR workflow concurrency with cancellation of superseded runs. Dependabot PRs retain formatting, Clippy, unit tests, cargo-deny, zizmor, lf-only and managed CodeQL; skip the static release build/runtime qualification, concurrent runtime and stdout regressions for those PRs. Main pushes and other PRs retain full musl validation. Repository-managed musl CI runs on PRs and main pushes, avoiding duplicate feature-branch push runs.
 - Before merging, require green `lf-only`, applicable static musl CI, `zizmor` and `cargo-deny` checks. Fix security findings; any suppression must be narrow, explained inline and reviewed. `deny.toml` checks RustSec advisories (including unmaintained crates), rejects yanked dependencies, restricts licenses and sources, and warns on duplicate versions.
+- Require the applicable parser fuzz check before merging and maintain bounded fuzzing through [fuzz/README.md](fuzz/README.md); fuzzing is development-only, uses its own locked dependency graph and a GNU target, and does not qualify host/runtime compatibility. Pin installed tool versions and use locked dependency resolution; keep all action references at full SHAs.
 - Scorecard runs on `main` pushes and weekly, publishing results and uploading SARIF with job-scoped permissions. A configured workflow is not evidence of a published score or SLSA certification.
 - This repository has no shipped tags, GitHub Releases or published crates as inspected on 2026-11-15. Trusted Publishing, binary release SBOMs and release provenance are not applicable until an authorized release/distribution plan changes that scope. Do not add a SLSA badge without verified evidence.
 
