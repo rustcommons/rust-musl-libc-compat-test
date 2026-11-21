@@ -28,6 +28,7 @@ jobs:
           sudo apt-get install -y musl-tools binutils file
           rustup component add rustfmt clippy
           rustup target add x86_64-unknown-linux-musl
+          rustc --version
       - name: Check formatting of maintained modules
         run: rustfmt --check --edition 2024 --config skip_children=true src/main.rs src/output.rs src/runner.rs src/tests/support.rs src/tests/process.rs src/tests/filesystem.rs src/tests/syscalls.rs
       - name: Unit tests and lint
